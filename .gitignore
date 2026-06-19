@@ -1,0 +1,8 @@
+# Secrets - actual credentials, never commit
+.mcp.json
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Local working files
+.tmp/
+*.zip

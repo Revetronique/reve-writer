@@ -1,0 +1,6 @@
+{
+  "remoteControlAtStartup": true,
+  "enabledMcpjsonServers": [
+    "notion"
+  ]
+}

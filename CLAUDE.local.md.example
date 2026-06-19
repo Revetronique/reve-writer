@@ -1,0 +1,8 @@
+# CLAUDE.md ローカル設定（サンプル）
+
+このファイルをコピーして `CLAUDE.local.md` を作成する（Git管理外、`.gitignore` 対象）。
+チーム内の実際の値はここに記載し、リポジトリにはコミットしない。
+
+## Notion
+
+- 下書きフォルダ 親ページURL: https://app.notion.com/p/xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
