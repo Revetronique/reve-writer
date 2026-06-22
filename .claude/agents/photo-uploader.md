@@ -1,47 +1,61 @@
 ---
 name: photo-uploader
-description: NASからWordPress Media APIへの写真並列アップロード専門エージェント。Notionの下書きページから写真フォルダパスと選定写真リストを読み取り、PowerShell Jobsで全ファイルを並列アップロードする。バイナリデータはClaude APIを経由せずNASから直接WPへ送信する。
+description: NASからWordPress Media APIへの写真並列アップロード専門エージェント。Notionの下書きページから写真フォルダパスと選定写真リストを読み取り、全ファイルを並列アップロードする。バイナリデータはClaude APIを経由せずNASから直接WPへ送信する。
 tools:
-  - read_file
-  - write_file
-  - bash
+  - Bash
+  - Read
 ---
 
 # photo-uploader — 写真並列アップロードエージェント
 
-NASに保存された写真をWordPress Media APIへ並列アップロードし、
-取得したmedia IDとURLを返す専門エージェントです。
-
+NASに保存された写真をWordPress Media APIへ並列アップロードし、取得したmedia IDとURLを返す。
 バイナリデータは **Claude APIを経由しない**。NASから直接WPへ送信する。
 
 ---
 
-## 入力
+## STEP 0: OS検出
 
-オーケストレーターから以下を受け取る:
+最初に必ず以下を実行し、以降のSTEPで使うコマンドを決定する。
 
+```bash
+uname -s 2>/dev/null
 ```
-NAS写真フォルダ: {Event|Travel|Pilgrimage}\{フォルダ名}\
-選定写真リスト: filename1.jpg, filename2.jpg, ...
-```
 
-選定写真リストが空の場合はフォルダ内の全ファイルを対象とする。
+- `Darwin` または `Linux` → **macOS/Linux** のコマンドを使用
+- 空または失敗 → **Windows（PowerShell）** のコマンドを使用
 
 ---
 
-## STEP 1: フォルダ確認
+## STEP 1: NASフォルダ確認
 
+Notionの「NAS写真フォルダ」フィールドはWindows形式（例: `Event\Art-Ginza-20260610\`）で記録されている場合がある。
+macOS/Linuxの場合はバックスラッシュをスラッシュに変換してマウントポイントと結合する。
+
+**macOS/Linux** — マウントポイント: `/Volumes/Photos/`
+```bash
+ls "/Volumes/Photos/{パス}/"
+```
+
+**Windows** — マウントポイント: `Y:\`（`\\DiskStation\Photos` をYドライブに割り当て済みの前提）
 ```powershell
-ls "Y:\{Event|Travel|Pilgrimage}\{フォルダ名}\"
+Get-ChildItem "Y:\{パス}\"
 ```
 
-- フォルダが存在しない場合: エラーを返してアップロード中止
-- 選定写真リストのファイルが見つからない場合: 該当ファイルを `[★写真: ファイルが見つかりません]` として報告
+フォルダが存在しない・空の場合はエラーを報告して中止。
+選定写真リストのファイルが見つからない場合は `[★写真: ファイルが見つかりません]` として報告。
 
 ---
 
-## STEP 2: 環境変数の確認
+## STEP 2: 環境変数確認
 
+**macOS/Linux:**
+```bash
+[ -z "$WP_SITE_URL" ]     && echo "ERROR: WP_SITE_URL 未設定"     && exit 1
+[ -z "$WP_USERNAME" ]     && echo "ERROR: WP_USERNAME 未設定"     && exit 1
+[ -z "$WP_APP_PASSWORD" ] && echo "ERROR: WP_APP_PASSWORD 未設定" && exit 1
+```
+
+**Windows:**
 ```powershell
 if (-not $env:WP_USERNAME)    { Write-Error "WP_USERNAME が未設定"; exit 1 }
 if (-not $env:WP_APP_PASSWORD){ Write-Error "WP_APP_PASSWORD が未設定"; exit 1 }
@@ -50,11 +64,44 @@ if (-not $env:WP_SITE_URL)    { Write-Error "WP_SITE_URL が未設定"; exit 1 }
 
 ---
 
-## STEP 3: PowerShell Jobsで並列アップロード
+## STEP 3: 並列アップロード
 
+**macOS/Linux（bash バックグラウンドジョブ）:**
+```bash
+NAS_FOLDER="/Volumes/Photos/{パス}/"
+TMP=$(mktemp -d)
+
+for fn in "file1.jpg" "file2.jpg" ...; do
+  safe="${fn// /_}"
+  (curl -s \
+    -X POST "${WP_SITE_URL}/wp-json/wp/v2/media" \
+    -u "${WP_USERNAME}:${WP_APP_PASSWORD}" \
+    -H "Content-Type: image/jpeg" \
+    -H "Content-Disposition: attachment; filename=\"${fn}\"" \
+    --data-binary "@${NAS_FOLDER}/${fn}" \
+    -o "${TMP}/${safe}.json") &
+done
+wait
+
+for fn in "file1.jpg" "file2.jpg" ...; do
+  safe="${fn// /_}"
+  python3 -c "
+import json
+with open('${TMP}/${safe}.json') as f:
+    r = json.load(f)
+if 'id' in r:
+    print(f'${fn} | id={r[\"id\"]} | {r[\"source_url\"]}')
+else:
+    print(f'${fn} | ERROR: {r.get(\"message\", \"unknown\")}')
+"
+done
+rm -rf "$TMP"
+```
+
+**Windows（PowerShell Start-Job）:**
 ```powershell
-$nasFolder = "Y:\{フォルダパス}\"
-$files = @("filename1.jpg", "filename2.jpg", ...)
+$nasFolder = "Y:\{パス}\"
+$files = @("file1.jpg", "file2.jpg", ...)
 
 $jobs = $files | ForEach-Object {
   $fn = $_; $fp = $nasFolder + $fn
@@ -64,44 +111,24 @@ $jobs = $files | ForEach-Object {
       -X POST "$url/wp-json/wp/v2/media" `
       -u "${u}:${p}" `
       -H "Content-Type: image/jpeg" `
-      -H "Content-Disposition: attachment; filename=$fn" `
+      -H "Content-Disposition: attachment; filename=`"$fn`"" `
       --data-binary "@$fp"
   } -ArgumentList $env:WP_SITE_URL, $env:WP_USERNAME, $env:WP_APP_PASSWORD, $fp, $fn
 }
 
 $results = $jobs | Wait-Job | Receive-Job
 $jobs | Remove-Job
-```
 
----
-
-## STEP 4: 結果の集約と返却
-
-```powershell
-$uploaded = @()
-$failed   = @()
-
+$uploaded = @(); $failed = @()
 $results | ForEach-Object {
   try {
     $r = $_ | ConvertFrom-Json
-    if ($r.id) {
-      $uploaded += [PSCustomObject]@{ file = $r.slug; id = $r.id; url = $r.source_url }
-    } else {
-      $failed += $_
-    }
-  } catch {
-    $failed += $_
-  }
+    if ($r.id) { $uploaded += [PSCustomObject]@{ file = $fn; id = $r.id; url = $r.source_url } }
+    else { $failed += $_ }
+  } catch { $failed += $_ }
 }
-
-# 成功結果を表示
 $uploaded | Format-Table -AutoSize
-
-# 失敗があれば報告
-if ($failed.Count -gt 0) {
-  Write-Warning "$($failed.Count) 件のアップロードに失敗しました"
-  $failed | ForEach-Object { Write-Warning $_ }
-}
+if ($failed.Count -gt 0) { Write-Warning "$($failed.Count) 件のアップロードに失敗しました" }
 ```
 
 ---
@@ -112,9 +139,9 @@ if ($failed.Count -gt 0) {
 
 ```
 【アップロード結果】
-✅ filename1.jpg  → id:1234  https://{WP_SITE_URL}/wp-content/uploads/.../filename1.jpg
-✅ filename2.jpg  → id:1235  https://...
-❌ filename3.jpg  → アップロード失敗 [★写真: アップロード失敗]
+✅ filename1.jpg → id:1234  https://.../filename1.jpg
+✅ filename2.jpg → id:1235  https://...
+❌ filename3.jpg → アップロード失敗 [★写真: アップロード失敗]
 ```
 
 ---
@@ -123,4 +150,3 @@ if ($failed.Count -gt 0) {
 
 - 写真のバイナリデータをClaude APIに送信すること
 - ユーザー確認なしに予定外のファイルをアップロードすること
-- `wp-poster` より先に実行すること（並列実行はOK、依存関係なし）

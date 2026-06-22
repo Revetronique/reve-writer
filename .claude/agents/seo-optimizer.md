@@ -2,9 +2,9 @@
 name: seo-optimizer
 description: ブログ記事のSEO最適化エージェント。タイトル・メタディスクリプション・見出し構成・キーワード配置を分析して改善案を提示する。WordPress投稿に必要なスラッグとメタ情報も生成する。
 tools:
-  - read_file
-  - write_file
-  - web_search
+  - Read
+  - Write
+  - WebSearch
 ---
 
 # seo-optimizer — SEO最適化エージェント
@@ -83,4 +83,4 @@ tools:
 - タイトルやメタディスクリプションを変える際は元の情報（固有名詞・数字）を保持すること
 - SEOのためにReve文体を崩してはいけない（文体調整はproofreaderの担当）
 - 過度なキーワード詰め込みは提案しない（Googleスパム判定リスク）
-- web_searchは競合記事の検索意図確認に使用してよい（使う場合は検索クエリを明示）
+- WebSearchは競合記事の検索意図確認に使用してよい（使う場合は検索クエリを明示）

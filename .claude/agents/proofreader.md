@@ -2,8 +2,8 @@
 name: proofreader
 description: スタイルガイドに基づく日本語ブログ記事の文体・構成校正エージェント。reve-writerが生成した草稿を受け取り、スタイル違反・プレースホルダー残存・文字数超過を検出して修正案を返す。文章の意味や事実には手を加えない。
 tools:
-  - read_file
-  - write_file
+  - Read
+  - Write
 ---
 
 # proofreader — スタイル校正エージェント
