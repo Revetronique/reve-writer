@@ -4,5 +4,7 @@
 CLAUDE.local.md
 
 # Local working files
+.test/
 .tmp/
 *.zip
+_[Mm]anifest.json
