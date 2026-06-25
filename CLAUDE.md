@@ -653,9 +653,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{spot_description}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
@@ -711,9 +711,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{venue_atmosphere}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{photo_venue_url}}" alt="{{event_name}} 会場の様子" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{photo_venue_url}}" alt="{{event_name}} 会場の様子" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{venue_caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
@@ -732,9 +732,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{highlight_detail}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{highlight_photo_url}}" alt="{{highlight_title}}" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{highlight_photo_url}}" alt="{{highlight_title}}" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{highlight_caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
@@ -753,9 +753,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{food_and_goods}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{food_photo_url}}" alt="{{food_caption}}" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{food_photo_url}}" alt="{{food_caption}}" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{food_caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
@@ -809,9 +809,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{spot_description}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{spot_photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{spot_photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{spot_caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
@@ -830,9 +830,9 @@ GPS情報なし・ファイル名が不規則な古い写真は自動マッチ�
 <p>{{food_description}}</p>
 <!-- /wp:paragraph -->
 
-<!-- wp:image {"id":{{photo_id}},"width":900,"sizeSlug":"large"} -->
+<!-- wp:image {"id":{{photo_id}},"width":800,"sizeSlug":"large"} -->
 <figure class="wp-block-image size-large is-resized">
-<img src="{{food_photo_url}}" alt="{{restaurant_name}} {{menu_item}}" class="wp-image-{{photo_id}}" width="900" style="max-width: 100%; height: auto;"/>
+<img src="{{food_photo_url}}" alt="{{restaurant_name}} {{menu_item}}" class="wp-image-{{photo_id}}" width="800" style="max-width: 100%; height: auto;"/>
 <figcaption class="wp-element-caption">{{food_caption}}</figcaption>
 </figure>
 <!-- /wp:image -->
