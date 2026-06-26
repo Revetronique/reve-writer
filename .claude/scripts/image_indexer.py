@@ -27,7 +27,10 @@ reve-writer (Claude.ai) はこの manifest を読み、下書きの
 
 import argparse
 import json
+import os
 import sys
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -137,42 +140,82 @@ def main() -> None:
     ap.add_argument("--num-ctx", type=int, default=8192,
                     help="コンテキスト窓のトークン数（既定: 8192）。溢れるなら16384等に上げる")
     ap.add_argument("--force", action="store_true", help="索引済みの写真も再解析する")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="並列処理数（既定: 1=直列）。Ollamaの OLLAMA_NUM_PARALLEL と合わせること")
+    ap.add_argument("--files", nargs="+", metavar="FILE",
+                    help="解析するファイル名を指定（省略時はフォルダ内全ファイル）")
     args = ap.parse_args()
 
     folder = Path(args.folder)
     if not folder.is_dir():
         sys.exit(f"フォルダが見つかりません: {folder}")
 
-    images = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
+    if args.files:
+        images = []
+        for name in args.files:
+            p = folder / name
+            if not p.exists():
+                print(f"  ! ファイルが見つかりません: {name}")
+            elif p.suffix.lower() not in IMAGE_EXTS:
+                print(f"  ! 対応していない形式です: {name}")
+            else:
+                images.append(p)
+        images = sorted(images)
+    else:
+        images = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
     if not images:
         sys.exit(f"対象画像がありません: {folder}")
 
     prompt = build_prompt(args.profile, args.context.strip())
     manifest = load_manifest(folder)
+    manifest_lock = threading.Lock()
     total = len(images)
     done = skipped = failed = 0
 
-    print(f"対象 {total} 枚 / モデル {args.model} / プロファイル {args.profile}")
+    if args.workers > 1:
+        num_parallel = int(os.environ.get("OLLAMA_NUM_PARALLEL", "1"))
+        if num_parallel < args.workers:
+            print(f"  警告: OLLAMA_NUM_PARALLEL={num_parallel} が --workers {args.workers} より小さいです。")
+            print(f"         並列効果が出ません。以下を実行後にOllamaを再起動してください:")
+            print(f'         [System.Environment]::SetEnvironmentVariable("OLLAMA_NUM_PARALLEL", "{args.workers}", "User")')
+
+    print(f"対象 {total} 枚 / モデル {args.model} / プロファイル {args.profile} / 並列数 {args.workers}")
     if args.context.strip():
         print(f"文脈: {args.context.strip()}")
-    for i, img in enumerate(images, 1):
-        key = img.name
-        if not args.force and key in manifest:
+
+    targets = []
+    for img in images:
+        if not args.force and img.name in manifest:
             skipped += 1
-            continue
-        print(f"  [{i}/{total}] {key} ... ", end="", flush=True)
+        else:
+            targets.append(img)
+
+    if skipped:
+        print(f"  スキップ（索引済み）: {skipped} 枚")
+
+    def process(img: Path) -> tuple[str, dict | None, Exception | None]:
         try:
             result = analyze_image(img, args.model, prompt, args.host, args.num_ctx)
-            result["file"] = key
+            result["file"] = img.name
             result["profile"] = args.profile
             result["indexed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            manifest[key] = result
-            done += 1
-            print("OK")
-            save_manifest(folder, manifest)  # 1枚ごとに保存（中断しても進捗は残る）
+            return img.name, result, None
         except Exception as e:  # noqa: BLE001
-            failed += 1
-            print(f"NG ({e})")
+            return img.name, None, e
+
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = {executor.submit(process, img): img for img in targets}
+        for future in as_completed(futures):
+            key, result, err = future.result()
+            if err:
+                failed += 1
+                print(f"  NG {key} ({err})")
+            else:
+                done += 1
+                print(f"  OK {key}")
+                with manifest_lock:
+                    manifest[key] = result
+                    save_manifest(folder, manifest)  # 1枚ごとに保存（中断しても進捗は残る）
 
     save_manifest(folder, manifest)
     print(f"\n完了: 解析 {done} / スキップ {skipped} / 失敗 {failed}")

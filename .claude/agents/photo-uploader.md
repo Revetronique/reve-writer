@@ -146,6 +146,22 @@ if ($failed.Count -gt 0) { Write-Warning "$($failed.Count) 件のアップロー
 
 ---
 
+## トラブルシューティング: 403 Forbidden（Powered by SiteGuard Lite）
+
+画像アップロードのみ403で落ち、`GET /wp/v2/media` や記事の `POST /wp/v2/posts`（JSON）は通る場合、
+**WordPressプラグインのSiteGuard Liteではなく、ConoHa WING管理パネル側のサーバーレベルWAF**が原因の可能性が高い。
+「OSコマンドインジェクションからの防御」ルールがJPEGバイナリ内の偶発的なバイト列（`<?`に似たパターン等）を誤検知することがある。
+
+判別方法:
+1. `GET /wp-json/wp/v2/media?per_page=1` が200で通るか確認
+2. `POST /wp-json/wp/v2/posts`（小さいJSONボディ）が201で通るか確認
+3. 上記2つが通って画像バイナリPOSTだけ403になるなら、WPプラグイン設定（CAPTCHA・WAFチューニング・REST API制限）を無効化しても解決しない。ConoHa WING管理パネルのWAF設定で対象ルールにURL除外（`/wp-json/wp/v2/media`）を追加してもらうようユーザーに依頼する
+4. 代替策: アップロード元で `sips`（macOS）等により画像を再エンコードしてからPOSTすると、誤検知の原因バイト列が変わり通過することがある
+
+詳細は `[[project-wp-media-waf-block]]` メモリも参照。
+
+---
+
 ## 絶対禁止事項
 
 - 写真のバイナリデータをClaude APIに送信すること

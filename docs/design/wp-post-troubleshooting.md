@@ -6,6 +6,7 @@
 |------|------|------|
 | 403 Powered by SiteGuard Lite（大きいボディ） | JSONが肥大化してSiteGuardのREST API制限に引っかかった可能性 | `Get-Content -Raw`を使っていないか確認。SiteGuardを一時無効化して切り分け |
 | 403 Powered by SiteGuard Lite（全リクエスト） | SiteGuardのREST API制限が有効 | SiteGuardを一時無効化 |
+| 403 Powered by SiteGuard Lite（画像POSTのみ。記事JSON POSTは通る） | **ConoHa WING側のサーバーレベルWAF**（「OSコマンドインジェクションからの防御」誤検知）。WPプラグインのSiteGuard Liteとは別物 | 下記「4. 画像アップロードのみ403になる」を参照 |
 | 400 rest_invalid_json / Syntax error | JSONにBOMが混入 | BOMなしUTF-8で書き出す |
 | 400 rest_invalid_json / Syntax error | `Get-Content -Raw`がオブジェクトを返す | `[System.IO.File]::ReadAllText`で読む |
 | 401 Unauthorized | Application Passwordが不正 | WP管理画面でパスワードを再発行 |
@@ -88,6 +89,41 @@ $content = [System.IO.File]::ReadAllText("file.html", [System.Text.Encoding]::UT
 
 #### 原因B: PowerShell 5.1 の ConvertTo-Json が \uXXXX エスケープする
 日本語文字が `どうも`（どうも）のようにエスケープされ、ファイルサイズが2〜3倍になる。ただし **JSONとしては有効** なので、そのまま送信して問題ない。エスケープを戻す regex 処理を加えると逆にJSONが壊れるため、対処不要。
+
+---
+
+### 4. 画像アップロードのみ403になる（ConoHa WING側WAF）
+
+#### 症状
+記事投稿（`POST /wp/v2/posts` のJSON）や `GET /wp/v2/media` は通るのに、
+画像のバイナリPOST（`POST /wp/v2/media`）だけが403 Forbidden（Powered by SiteGuard Lite）になる。
+WPプラグインのSiteGuard Lite設定（CAPTCHA・WAFチューニング・REST API制限）をすべて無効化しても変化しない。
+DELETEメソッドも同じ理由で403になることがある。
+
+#### 原因
+WordPressプラグインのSiteGuard Liteではなく、**ConoHa WING管理パネル側のサーバーレベルWAF**が原因。
+「OSコマンドインジェクションからの防御」ルール（パターン `<??>` 等）が、JPEGバイナリ内に偶然含まれる
+`<?` に似たバイト列（EXIF等のメタデータ含む）を誤検知（false positive）してブロックしている。
+このWAFはWordPressのフックより手前（nginx層）で動作するため、プラグイン側の設定は効かない。
+
+#### 切り分け方
+1. `GET /wp-json/wp/v2/media?per_page=1` → 200か確認（認証・REST APIの生死を確認）
+2. `POST /wp-json/wp/v2/posts`（小さいJSONボディ）→ 201か確認（POST自体がブロックされていないか確認）
+3. 1, 2が通って画像バイナリPOSTのみ403なら、ファイルアップロード検知のWAFルールが濃厚
+
+#### 対応
+- **対応A（恒久対応）**: ConoHa WING管理パネルのWAF設定で、該当ルール（OSコマンドインジェクション防御）に
+  対象URL（`/wp-json/wp/v2/media`）の除外設定を追加してもらう。一度設定すれば以降は通る
+- **対応B（一時回避）**: アップロード元で画像を再エンコードしてからPOSTする。バイト列が変わるため
+  誤検知を回避できることが確認されている。
+  - macOS: `sips -s format jpeg input.jpg -o output.jpg`
+  - Windows: `sips`相当のコマンドは無いが、PowerShell標準の`System.Drawing`（.NET Framework、追加インストール不要）で同様に再保存できる
+    ```powershell
+    Add-Type -AssemblyName System.Drawing
+    $img = [System.Drawing.Image]::FromFile("input.jpg")
+    $img.Save("output.jpg", [System.Drawing.Imaging.ImageFormat]::Jpeg)
+    $img.Dispose()
+    ```
 
 ---
 
