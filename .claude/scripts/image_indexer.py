@@ -11,7 +11,7 @@ reve-writer (Claude.ai) はこの manifest を読み、下書きの
 本スクリプトの役割は「画像の中身をテキスト化する」ところまで。
 
 前提:
-    pip install ollama
+    pip install ollama pillow
     ollama pull qwen3-vl:8b        # VRAM 8GBなら qwen3-vl:4b
     ollama serve  (通常は自動起動)
 
@@ -29,8 +29,10 @@ import argparse
 import json
 import os
 import sys
+import tempfile
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -38,6 +40,11 @@ try:
     import ollama
 except ImportError:
     sys.exit("ollama パッケージが必要です:  pip install ollama")
+
+try:
+    from PIL import Image
+except ImportError:
+    sys.exit("Pillow パッケージが必要です:  pip install pillow")
 
 # HEICは事前に .claude/scripts のImageMagickスクリプトでJPEG化しておく前提
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -88,27 +95,50 @@ def build_prompt(profile: str, context: str) -> str:
     return base
 
 
+RESIZE_MAX_SIDE = 1024  # この長辺を超える画像のみ縮小（解析精度はモデル側の入力解像度で頭打ちのため十分）
+
+
+@contextmanager
+def resized_for_analysis(path: Path):
+    """長辺がRESIZE_MAX_SIDEを超える画像だけ一時ファイルに縮小する。使用後は自動削除。"""
+    with Image.open(path) as img:
+        if max(img.size) <= RESIZE_MAX_SIDE:
+            yield path
+            return
+        img = img.convert("RGB")
+        img.thumbnail((RESIZE_MAX_SIDE, RESIZE_MAX_SIDE), Image.LANCZOS)
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp_path = Path(tmp.name)
+        tmp.close()
+        try:
+            img.save(tmp_path, "JPEG", quality=85)
+            yield tmp_path
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
 def analyze_image(path: Path, model: str, prompt: str, host: str | None,
                   num_ctx: int, attempts: int = 2) -> dict:
     client = ollama.Client(host=host) if host else ollama
     last_err: Exception | None = None
-    for _ in range(attempts):
-        resp = client.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt, "images": [str(path)]}],
-            format=SCHEMA,
-            think=False,  # 構造化抽出に思考は不要。思考側にトークンを使い切る空応答も防ぐ
-            # num_ctx を明示しないとOllama既定の4096に絞られ、画像のトークンで溢れる
-            options={"temperature": 0.2, "num_ctx": num_ctx},
-        )
-        content = (resp["message"].get("content") or "").strip()
-        if not content:
-            last_err = ValueError("モデルが空応答を返しました")
-            continue
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError as e:
-            last_err = e  # 非JSON応答。サンプリングのゆらぎなら再試行で通ることが多い
+    with resized_for_analysis(path) as send_path:
+        for _ in range(attempts):
+            resp = client.chat(
+                model=model,
+                messages=[{"role": "user", "content": prompt, "images": [str(send_path)]}],
+                format=SCHEMA,
+                think=False,  # 構造化抽出に思考は不要。思考側にトークンを使い切る空応答も防ぐ
+                # num_ctx を明示しないとOllama既定の4096に絞られ、画像のトークンで溢れる
+                options={"temperature": 0.2, "num_ctx": num_ctx},
+            )
+            content = (resp["message"].get("content") or "").strip()
+            if not content:
+                last_err = ValueError("モデルが空応答を返しました")
+                continue
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError as e:
+                last_err = e  # 非JSON応答。サンプリングのゆらぎなら再試行で通ることが多い
     raise RuntimeError(f"有効なJSONを取得できませんでした: {last_err}")
 
 
