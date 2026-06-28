@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 #
 # NAS上にLoveLiveのグループ別フォルダ構成を一括作成する。
-# Y:\LoveLive\{グループ名}\{Live,Exhibition,Travel} を作成する（既存フォルダはスキップ）。
+# Y:\LoveLive\{グループ名}\{Live,Popup,Travel} を作成する（既存フォルダはスキップ）。
+# CrossOver はシリーズ合同イベント用、Popup はパネル展示・劇中再現・物販ブース等の催事用。
 #
 # 使い方:
 #   ./create-nas-folders.sh [ROOT]
@@ -11,8 +12,8 @@ set -euo pipefail
 
 ROOT="${1:-/y}"
 
-GROUPS=("Muse" "Aqours" "Nijigasaki" "Liella" "Hasunosora" "Bluebird" "Musical" "Yohane")
-SUBS=("Live" "Exhibition" "Travel")
+GROUPS=("Muse" "Aqours" "Nijigasaki" "Liella" "Hasunosora" "Bluebird" "Musical" "Yohane" "CrossOver")
+SUBS=("Live" "Popup" "Travel")
 
 LOVELIVE_ROOT="$ROOT/LoveLive"
 
