@@ -8,3 +8,4 @@ CLAUDE.local.md
 .tmp/
 *.zip
 _[Mm]anifest.json
+__pycache__/

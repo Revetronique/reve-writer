@@ -11,7 +11,7 @@ reve-writer (Claude.ai) はこの manifest を読み、下書きの
 本スクリプトの役割は「画像の中身をテキスト化する」ところまで。
 
 前提:
-    pip install ollama
+    pip install ollama pillow
     ollama pull qwen3-vl:8b        # VRAM 8GBなら qwen3-vl:4b
     ollama serve  (通常は自動起動)
 
@@ -27,7 +27,12 @@ reve-writer (Claude.ai) はこの manifest を読み、下書きの
 
 import argparse
 import json
+import os
 import sys
+import tempfile
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +40,11 @@ try:
     import ollama
 except ImportError:
     sys.exit("ollama パッケージが必要です:  pip install ollama")
+
+try:
+    from PIL import Image
+except ImportError:
+    sys.exit("Pillow パッケージが必要です:  pip install pillow")
 
 # HEICは事前に .claude/scripts のImageMagickスクリプトでJPEG化しておく前提
 IMAGE_EXTS = {".jpg", ".jpeg", ".png", ".webp"}
@@ -85,27 +95,50 @@ def build_prompt(profile: str, context: str) -> str:
     return base
 
 
+RESIZE_MAX_SIDE = 1024  # この長辺を超える画像のみ縮小（解析精度はモデル側の入力解像度で頭打ちのため十分）
+
+
+@contextmanager
+def resized_for_analysis(path: Path):
+    """長辺がRESIZE_MAX_SIDEを超える画像だけ一時ファイルに縮小する。使用後は自動削除。"""
+    with Image.open(path) as img:
+        if max(img.size) <= RESIZE_MAX_SIDE:
+            yield path
+            return
+        img = img.convert("RGB")
+        img.thumbnail((RESIZE_MAX_SIDE, RESIZE_MAX_SIDE), Image.LANCZOS)
+        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        tmp_path = Path(tmp.name)
+        tmp.close()
+        try:
+            img.save(tmp_path, "JPEG", quality=85)
+            yield tmp_path
+        finally:
+            tmp_path.unlink(missing_ok=True)
+
+
 def analyze_image(path: Path, model: str, prompt: str, host: str | None,
                   num_ctx: int, attempts: int = 2) -> dict:
     client = ollama.Client(host=host) if host else ollama
     last_err: Exception | None = None
-    for _ in range(attempts):
-        resp = client.chat(
-            model=model,
-            messages=[{"role": "user", "content": prompt, "images": [str(path)]}],
-            format=SCHEMA,
-            think=False,  # 構造化抽出に思考は不要。思考側にトークンを使い切る空応答も防ぐ
-            # num_ctx を明示しないとOllama既定の4096に絞られ、画像のトークンで溢れる
-            options={"temperature": 0.2, "num_ctx": num_ctx},
-        )
-        content = (resp["message"].get("content") or "").strip()
-        if not content:
-            last_err = ValueError("モデルが空応答を返しました")
-            continue
-        try:
-            return json.loads(content)
-        except json.JSONDecodeError as e:
-            last_err = e  # 非JSON応答。サンプリングのゆらぎなら再試行で通ることが多い
+    with resized_for_analysis(path) as send_path:
+        for _ in range(attempts):
+            resp = client.chat(
+                model=model,
+                messages=[{"role": "user", "content": prompt, "images": [str(send_path)]}],
+                format=SCHEMA,
+                think=False,  # 構造化抽出に思考は不要。思考側にトークンを使い切る空応答も防ぐ
+                # num_ctx を明示しないとOllama既定の4096に絞られ、画像のトークンで溢れる
+                options={"temperature": 0.2, "num_ctx": num_ctx},
+            )
+            content = (resp["message"].get("content") or "").strip()
+            if not content:
+                last_err = ValueError("モデルが空応答を返しました")
+                continue
+            try:
+                return json.loads(content)
+            except json.JSONDecodeError as e:
+                last_err = e  # 非JSON応答。サンプリングのゆらぎなら再試行で通ることが多い
     raise RuntimeError(f"有効なJSONを取得できませんでした: {last_err}")
 
 
@@ -137,42 +170,82 @@ def main() -> None:
     ap.add_argument("--num-ctx", type=int, default=8192,
                     help="コンテキスト窓のトークン数（既定: 8192）。溢れるなら16384等に上げる")
     ap.add_argument("--force", action="store_true", help="索引済みの写真も再解析する")
+    ap.add_argument("--workers", type=int, default=1,
+                    help="並列処理数（既定: 1=直列）。Ollamaの OLLAMA_NUM_PARALLEL と合わせること")
+    ap.add_argument("--files", nargs="+", metavar="FILE",
+                    help="解析するファイル名を指定（省略時はフォルダ内全ファイル）")
     args = ap.parse_args()
 
     folder = Path(args.folder)
     if not folder.is_dir():
         sys.exit(f"フォルダが見つかりません: {folder}")
 
-    images = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
+    if args.files:
+        images = []
+        for name in args.files:
+            p = folder / name
+            if not p.exists():
+                print(f"  ! ファイルが見つかりません: {name}")
+            elif p.suffix.lower() not in IMAGE_EXTS:
+                print(f"  ! 対応していない形式です: {name}")
+            else:
+                images.append(p)
+        images = sorted(images)
+    else:
+        images = sorted(p for p in folder.iterdir() if p.suffix.lower() in IMAGE_EXTS)
     if not images:
         sys.exit(f"対象画像がありません: {folder}")
 
     prompt = build_prompt(args.profile, args.context.strip())
     manifest = load_manifest(folder)
+    manifest_lock = threading.Lock()
     total = len(images)
     done = skipped = failed = 0
 
-    print(f"対象 {total} 枚 / モデル {args.model} / プロファイル {args.profile}")
+    if args.workers > 1:
+        num_parallel = int(os.environ.get("OLLAMA_NUM_PARALLEL", "1"))
+        if num_parallel < args.workers:
+            print(f"  警告: OLLAMA_NUM_PARALLEL={num_parallel} が --workers {args.workers} より小さいです。")
+            print(f"         並列効果が出ません。以下を実行後にOllamaを再起動してください:")
+            print(f'         [System.Environment]::SetEnvironmentVariable("OLLAMA_NUM_PARALLEL", "{args.workers}", "User")')
+
+    print(f"対象 {total} 枚 / モデル {args.model} / プロファイル {args.profile} / 並列数 {args.workers}")
     if args.context.strip():
         print(f"文脈: {args.context.strip()}")
-    for i, img in enumerate(images, 1):
-        key = img.name
-        if not args.force and key in manifest:
+
+    targets = []
+    for img in images:
+        if not args.force and img.name in manifest:
             skipped += 1
-            continue
-        print(f"  [{i}/{total}] {key} ... ", end="", flush=True)
+        else:
+            targets.append(img)
+
+    if skipped:
+        print(f"  スキップ（索引済み）: {skipped} 枚")
+
+    def process(img: Path) -> tuple[str, dict | None, Exception | None]:
         try:
             result = analyze_image(img, args.model, prompt, args.host, args.num_ctx)
-            result["file"] = key
+            result["file"] = img.name
             result["profile"] = args.profile
             result["indexed_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-            manifest[key] = result
-            done += 1
-            print("OK")
-            save_manifest(folder, manifest)  # 1枚ごとに保存（中断しても進捗は残る）
+            return img.name, result, None
         except Exception as e:  # noqa: BLE001
-            failed += 1
-            print(f"NG ({e})")
+            return img.name, None, e
+
+    with ThreadPoolExecutor(max_workers=args.workers) as executor:
+        futures = {executor.submit(process, img): img for img in targets}
+        for future in as_completed(futures):
+            key, result, err = future.result()
+            if err:
+                failed += 1
+                print(f"  NG {key} ({err})")
+            else:
+                done += 1
+                print(f"  OK {key}")
+                with manifest_lock:
+                    manifest[key] = result
+                    save_manifest(folder, manifest)  # 1枚ごとに保存（中断しても進捗は残る）
 
     save_manifest(folder, manifest)
     print(f"\n完了: 解析 {done} / スキップ {skipped} / 失敗 {failed}")
