@@ -94,6 +94,18 @@ Y:\
 
 **注意:** バイナリデータは Claude API を経由しない（PC → WordPress 直接）
 
+**取り込みフロー:**
+```
+[スマホ/カメラ] → [NAS所定フォルダへ手動コピー]
+                         ↓
+               [HEIC→JPEG変換、元HEICは残す]
+                         ↓
+               [EXIF日付＋slug指定でリネーム]
+                         ↓
+               image_indexer.py 実行
+               （manifest.json生成）
+```
+
 ---
 
 ### 5. reve-writer（Claude.ai用プロジェクト指示 + Notion接続）
