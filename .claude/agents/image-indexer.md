@@ -80,28 +80,19 @@ ls "{folder_path}"
 
 ### HEIC ファイルの検出
 
-`.heic` / `.HEIC` ファイルが存在する場合は**処理を一時停止**し、以下を案内する:
+対応するJPEGが存在しない `.heic` / `.HEIC` ファイルがある場合は**処理を一時停止**し、以下を案内する:
 
 ```
-⚠️ HEIC ファイルが X 枚見つかりました。image_indexer.py は HEIC 非対応です。
-事前に JPEG に変換してから再実行してください。
+⚠️ 未変換の HEIC ファイルが X 枚見つかりました。image_indexer.py は HEIC 非対応です。
+以下のスクリプトで JPEG に変換してから再実行してください（OS自動判定。元のHEICは残ります）:
 
-【変換コマンド】
-# macOS
-for file in *.HEIC; do sips -s format jpeg "$file" -o "${file%.HEIC}.jpg"; done
+.claude/scripts/convert-heic-to-jpeg.sh "<フォルダパス>"
 
-# Windows（System.Drawing / Microsoft Store「HEIF 画像拡張機能」が必要）
-Add-Type -AssemblyName System.Drawing
-Get-ChildItem *.HEIC | ForEach-Object {
-    $img = [System.Drawing.Image]::FromFile($_.FullName)
-    $img.Save(($_.FullName -replace '\.HEIC$', '.jpg'), [System.Drawing.Imaging.ImageFormat]::Jpeg)
-    $img.Dispose()
-}
-
-変換後、元の .HEIC ファイルは削除してから再実行してください。
+※ Windowsの場合は Microsoft Store の「HEIF 画像拡張機能」が必要
 ```
 
-HEIC 以外の対応ファイルが存在する場合は、それらのみ処理を続行するかユーザーに確認する。
+- 変換後も元の `.HEIC` は削除しない（索引対象は jpg/jpeg/png/webp のみなのでHEICが残っていても問題ない）
+- HEIC 以外の対応ファイルのみで先に索引を進めるかユーザーに確認してもよい
 
 ---
 

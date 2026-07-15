@@ -1,0 +1,258 @@
+<!-- ============================================================
+     Gutenbergブロックテンプレート集（記事タイプ別）
+     使用するタイプのセクションだけを切り出して使うこと。
+     ============================================================ -->
+
+
+<!-- ############################################################
+     Type A/B/C: 聖地巡礼記事（共通ベース）
+     ############################################################ -->
+
+<!-- 導入 -->
+<!-- wp:paragraph -->
+<p>どうも、Reveです。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>{{intro_text}}</p>
+<!-- /wp:paragraph -->
+
+<!-- 概要テーブル -->
+<!-- wp:table {"className":"is-style-simple"} -->
+<figure class="wp-block-table is-style-simple"><table><tbody>
+<tr><th>作品</th><td>{{series}}</td></tr>
+<tr><th>場所</th><td>{{location}}</td></tr>
+<tr><th>訪問日</th><td>{{visit_date}}</td></tr>
+<tr><th>アクセス</th><td>{{access}}</td></tr>
+</tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- ===== スポットセクション（繰り返し） ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【{{spot_name}}】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>（{{series}} {{episode}}）</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>{{spot_description}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- ===== /スポットセクション ===== -->
+
+<!-- まとめ -->
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【まとめ】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{conclusion}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>もし参考になれば幸いです。</p>
+<!-- /wp:paragraph -->
+
+<!-- ナビカード（シリーズ記事の場合） -->
+<!-- wp:shortcode -->
+[navi_list name="{{menu_name}}"]
+<!-- /wp:shortcode -->
+
+
+<!-- ############################################################
+     Type D: イベントレポート
+     ############################################################ -->
+
+<!-- wp:paragraph -->
+<p>どうも、Reveです。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>{{event_date}} に {{event_name}} に行ってきました。{{intro_text}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【イベント概要】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:table {"className":"is-style-simple"} -->
+<figure class="wp-block-table is-style-simple"><table><tbody>
+<tr><th>イベント名</th><td>{{event_name}}</td></tr>
+<tr><th>開催日</th><td>{{event_date}}</td></tr>
+<tr><th>会場</th><td>{{venue}}</td></tr>
+<tr><th>アクセス</th><td>{{access_info}}</td></tr>
+<tr><th>入場料</th><td>{{admission}}</td></tr>
+<tr><th>公式サイト</th><td><a href="{{official_url}}" target="_blank" rel="noopener noreferrer">{{official_url_display}}</a></td></tr>
+</tbody></table></figure>
+<!-- /wp:table -->
+
+<!-- wp:paragraph -->
+<p>{{venue_atmosphere}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{photo_venue_url}}" alt="{{event_name}} 会場の様子" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{venue_caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- ===== 見どころセクション（メモのセクション数に応じて繰り返し） ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【{{highlight_title}}】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{highlight_overview}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>{{highlight_detail}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{highlight_photo_url}}" alt="{{highlight_title}}" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{highlight_caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>{{highlight_impression}}</p>
+<!-- /wp:paragraph -->
+
+<!-- ===== /見どころセクション ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【会場グルメ・購入品】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{food_and_goods}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{food_photo_url}}" alt="{{food_caption}}" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{food_caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- ===== アフィリエイトリンク挿入ポイント ===== -->
+<!-- wp:paragraph -->
+<p>{{affiliate_block}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【まとめ】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{summary}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>もし参考になれば幸いです。</p>
+<!-- /wp:paragraph -->
+
+
+<!-- ############################################################
+     Type E: お出かけレポート
+     ############################################################ -->
+
+<!-- wp:paragraph -->
+<p>どうも、Reveです。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>{{destination}} に行ってきたので、レポートします。{{intro_text}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【アクセス】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{access_detail}}</p>
+<!-- /wp:paragraph -->
+
+<!-- ===== アフィリエイト挿入ポイント: 交通系 ===== -->
+
+<!-- ===== スポットセクション（訪問順に繰り返し） ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【{{spot_name}}】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{spot_description}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{spot_photo_url}}" alt="{{spot_name}}" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{spot_caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- wp:paragraph -->
+<p>{{spot_impression}}</p>
+<!-- /wp:paragraph -->
+
+<!-- ===== /スポットセクション ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【ランチ: {{restaurant_name}}】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{food_description}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:image {"id":{{photo_id}},"sizeSlug":"large"} -->
+<figure class="wp-block-image size-large">
+<img src="{{food_photo_url}}" alt="{{restaurant_name}} {{menu_item}}" class="wp-image-{{photo_id}}"/>
+<figcaption class="wp-element-caption">{{food_caption}}</figcaption>
+</figure>
+<!-- /wp:image -->
+
+<!-- ===== アフィリエイト挿入ポイント: グルメ系 ===== -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【まとめ】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:paragraph -->
+<p>{{summary}}</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:paragraph -->
+<p>もし参考になれば幸いです。</p>
+<!-- /wp:paragraph -->
+
+<!-- wp:heading -->
+<h2 class="wp-block-heading">【基本情報】</h2>
+<!-- /wp:heading -->
+
+<!-- wp:table {"className":"is-style-simple"} -->
+<figure class="wp-block-table is-style-simple"><table><tbody>
+<tr><th>場所</th><td>{{destination}}</td></tr>
+<tr><th>住所</th><td>{{address}}</td></tr>
+<tr><th>営業時間</th><td>{{hours}}</td></tr>
+<tr><th>定休日</th><td>{{closed_days}}</td></tr>
+<tr><th>料金</th><td>{{price}}</td></tr>
+<tr><th>公式サイト</th><td><a href="{{official_url}}" target="_blank" rel="noopener noreferrer">{{official_url_display}}</a></td></tr>
+<tr><th>Google Maps</th><td><a href="https://www.google.com/maps?q={{lat}},{{lng}}" target="_blank" rel="noopener noreferrer">地図を開く</a></td></tr>
+</tbody></table></figure>
+<!-- /wp:table -->

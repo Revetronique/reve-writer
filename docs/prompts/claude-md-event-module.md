@@ -1,7 +1,9 @@
 # イベント・お出かけ記事 仕様リファレンス
 
-> **このモジュールは CLAUDE.md に統合済みです（2026-06）。**
-> 以下の内容は参照用として残しています。実際の動作は CLAUDE.md が優先されます。
+> **このモジュールの内容は CLAUDE.md と `.claude/skills/`（post-draft / precheck）に移設済みです（2026-07）。**
+> 以下は参照用アーカイブです。実際の動作は CLAUDE.md（共通制約・スタイル）と各スキル定義（ワークフロー）が優先されます。
+> Gutenbergテンプレートの最新版は `.claude/skills/post-draft/templates/types.html` を参照。
+> 本文中のNASパス・写真命名規則は旧仕様のまま（現行は `CLAUDE.local.md` を参照）。
 
 ---
 

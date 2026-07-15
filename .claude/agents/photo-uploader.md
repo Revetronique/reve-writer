@@ -66,6 +66,9 @@ if (-not $env:WP_SITE_URL)    { Write-Error "WP_SITE_URL が未設定"; exit 1 }
 
 ## STEP 3: 並列アップロード
 
+返却するURLは `media_details.sizes.large.source_url`（large版）を優先し、
+`large` サイズが存在しない場合（元画像が小さい等）は `source_url`（フルサイズ）にフォールバックする。
+
 **macOS/Linux（bash バックグラウンドジョブ）:**
 ```bash
 NAS_FOLDER="/Volumes/Photos/{パス}/"
@@ -90,7 +93,8 @@ import json
 with open('${TMP}/${safe}.json') as f:
     r = json.load(f)
 if 'id' in r:
-    print(f'${fn} | id={r[\"id\"]} | {r[\"source_url\"]}')
+    url = r.get('media_details', {}).get('sizes', {}).get('large', {}).get('source_url') or r['source_url']
+    print(f'${fn} | id={r[\"id\"]} | {url}')
 else:
     print(f'${fn} | ERROR: {r.get(\"message\", \"unknown\")}')
 "
@@ -123,7 +127,11 @@ $uploaded = @(); $failed = @()
 $results | ForEach-Object {
   try {
     $r = $_ | ConvertFrom-Json
-    if ($r.id) { $uploaded += [PSCustomObject]@{ file = $fn; id = $r.id; url = $r.source_url } }
+    if ($r.id) {
+      $url = $r.media_details.sizes.large.source_url
+      if (-not $url) { $url = $r.source_url }
+      $uploaded += [PSCustomObject]@{ file = $r.slug; id = $r.id; url = $url }
+    }
     else { $failed += $_ }
   } catch { $failed += $_ }
 }

@@ -2,5 +2,29 @@
   "remoteControlAtStartup": true,
   "enabledMcpjsonServers": [
     "notion"
-  ]
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__notion__API-post-search|mcp__claude_ai_Notion__notion-search",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json; print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':'notion-searchは使用禁止。notion-fetchでURLを直接指定すること（CLAUDE.md共通制約）'}}))\"",
+            "statusMessage": "notion-search禁止チェック"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash|PowerShell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -c \"import json,sys,re; c=json.load(sys.stdin).get('tool_input',{}).get('command',''); m=re.search(r'status.{0,3}[:=].{0,3}publish', c, re.I); print(json.dumps({'hookSpecificOutput':{'hookEventName':'PreToolUse','permissionDecision':'deny','permissionDecisionReason':'WordPress投稿は必ずdraft（CLAUDE.md共通制約）。status publish を含むコマンドはブロックされます'}})) if m else None\"",
+            "statusMessage": "draft必須チェック"
+          }
+        ]
+      }
+    ]
+  }
 }
