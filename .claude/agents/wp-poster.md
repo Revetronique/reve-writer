@@ -97,7 +97,6 @@ body = {
     "status":     "draft",
     "slug":       "（スラッグ）",
     "categories": [カテゴリID],
-    "meta": { "the_page_meta_description": "（メタディスクリプション）" }
 }
 with open('/tmp/wp-post.json', 'w', encoding='utf-8') as f:
     json.dump(body, f, ensure_ascii=False)
@@ -119,7 +118,6 @@ $bodyObj = [ordered]@{
     status     = "draft"
     slug       = "（スラッグ）"
     categories = @($categoryId)
-    meta       = @{ the_page_meta_description = "（メタディスクリプション）" }
 }
 $json = $bodyObj | ConvertTo-Json -Depth 5
 
@@ -171,6 +169,65 @@ if ($resp.id) {
     Write-Output "ステータス: $($resp.status)"
 } else {
     Write-Error "投稿失敗: $($resp.message) ($($resp.code))"
+}
+```
+
+---
+
+## STEP 5: メタディスクリプション設定（AIOSEO）
+
+SEOプラグインは **AIOSEO**。`wp/v2/posts` の `meta` フィールドではなく、専用エンドポイントを使う。
+STEP 4 で取得した投稿IDを使い、投稿直後に実行する。
+
+**macOS/Linux:**
+```bash
+POST_ID=（STEP4で取得したID）
+META_DESC="（メタディスクリプション）"
+
+python3 << PYEOF
+import json, subprocess, os
+
+body = {
+    "id": int("${POST_ID}"),
+    "description": "${META_DESC}",
+    "default": False
+}
+with open('/tmp/aioseo-meta.json', 'w', encoding='utf-8') as f:
+    json.dump(body, f, ensure_ascii=False)
+PYEOF
+
+HTTP=$(curl -s \
+  -o /tmp/aioseo-resp.json \
+  -w "%{http_code}" \
+  -X POST "${WP_SITE_URL}/wp-json/aioseo/v1/post" \
+  -u "${WP_USERNAME}:${WP_APP_PASSWORD}" \
+  -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary "@/tmp/aioseo-meta.json")
+[ "$HTTP" = "200" ] && echo "メタディスクリプション設定OK" || echo "AIOSEO ERROR: HTTP $HTTP"
+```
+
+**Windows:**
+```powershell
+$aioseoBody = [ordered]@{
+    id          = $resp.id        # STEP4の$respから取得
+    description = "（メタディスクリプション）"
+    default     = $false
+}
+$aioseoJson = $aioseoBody | ConvertTo-Json
+$utf8NoBom = [System.Text.UTF8Encoding]::new($false)
+[System.IO.File]::WriteAllText("$env:TEMP\aioseo-meta.json", $aioseoJson, $utf8NoBom)
+
+$aioseoCode = & curl.exe -s `
+    -o "$env:TEMP\aioseo-resp.json" -w "%{http_code}" `
+    -X POST "$env:WP_SITE_URL/wp-json/aioseo/v1/post" `
+    -u "$env:WP_USERNAME`:$env:WP_APP_PASSWORD" `
+    -H "Content-Type: application/json; charset=utf-8" `
+    --data-binary "@$env:TEMP\aioseo-meta.json"
+
+if ($aioseoCode -eq "200") {
+    Write-Output "メタディスクリプション設定OK"
+} else {
+    Write-Warning "AIOSEO ERROR: HTTP $aioseoCode"
 }
 ```
 

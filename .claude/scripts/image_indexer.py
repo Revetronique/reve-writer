@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 image_indexer.py  —  reve-writer 写真索引ジェネレータ
@@ -127,7 +127,6 @@ def analyze_image(path: Path, model: str, prompt: str, host: str | None,
                 model=model,
                 messages=[{"role": "user", "content": prompt, "images": [str(send_path)]}],
                 format=SCHEMA,
-                think=False,  # 構造化抽出に思考は不要。思考側にトークンを使い切る空応答も防ぐ
                 # num_ctx を明示しないとOllama既定の4096に絞られ、画像のトークンで溢れる
                 options={"temperature": 0.2, "num_ctx": num_ctx},
             )
@@ -170,8 +169,8 @@ def main() -> None:
     ap.add_argument("--num-ctx", type=int, default=8192,
                     help="コンテキスト窓のトークン数（既定: 8192）。溢れるなら16384等に上げる")
     ap.add_argument("--force", action="store_true", help="索引済みの写真も再解析する")
-    ap.add_argument("--workers", type=int, default=1,
-                    help="並列処理数（既定: 1=直列）。Ollamaの OLLAMA_NUM_PARALLEL と合わせること")
+    ap.add_argument("--workers", type=int, default=2,
+                    help="並列処理数（既定: 2）。Ollamaの OLLAMA_NUM_PARALLEL と合わせること")
     ap.add_argument("--files", nargs="+", metavar="FILE",
                     help="解析するファイル名を指定（省略時はフォルダ内全ファイル）")
     args = ap.parse_args()
